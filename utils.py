@@ -1,4 +1,5 @@
 import numpy as np
+import random
 
 
 def safe_log(n):
@@ -11,7 +12,8 @@ def calc_moments(b1, b2, moment, rms, gradient, t):
     return v, s, v / (1 - b1 ** t), s / (1 - b2 ** t)
 
 
-def auto_reshape(func):
-    def wrapper(self, data: np.ndarray, reverse=False):
-        return func(self, data if reverse else np.reshape(data, (-1, len(self.weights))), reverse)
+def mini_batch(func):
+    def wrapper(self, data: np.ndarray, labels: np.ndarray, *args, **kwargs):
+        samples = np.random.randint(0, len(data), size=min(32, len(data)))
+        return func(self, data[samples], labels[samples], *args, **kwargs)
     return wrapper
