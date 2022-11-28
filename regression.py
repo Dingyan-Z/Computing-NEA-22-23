@@ -32,10 +32,9 @@ class Base:
                 mini_batch = (train_data[samples], train_labels[samples])
             self.update(*mini_batch)
 
-    def update(self, data: np.ndarray, labels: np.ndarray):
+    def update(self, data: np.ndarray, differences: np.ndarray):
         self.iterations += 1
         m = len(data)
-        differences = self.predict(data) - labels
         for i in range(self.num_features):
             dw = (differences.dot(data[:, i]) + self.lambda_reg * self.weights[i]) / m
             self.v_dw[i], self.s_dw[i], v_dw_cor, s_dw_cor = utils.calc_moments(self.b1, self.b2, self.v_dw[i], self.s_dw[i], dw, self.iterations)
