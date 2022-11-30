@@ -11,6 +11,11 @@ class Tanh:
     def tanh_gradient(data: np.ndarray, *_):
         return 1 - np.tanh(data) ** 2
 
+    @staticmethod
+    def init_weights(inputs, units):
+        bound = 6 ** 0.5 / (inputs + units) ** 0.5
+        return np.random.uniform(-bound, bound, (inputs, units))
+
 
 class LeakyReLU:
 
@@ -21,3 +26,7 @@ class LeakyReLU:
     @staticmethod
     def gradient(data: np.ndarray, alpha):
         return np.where(data > 0, 1, alpha)
+
+    @staticmethod
+    def init_weights(inputs, units):
+        return np.random.normal(0, (2 / inputs) ** 0.5, (inputs, units))

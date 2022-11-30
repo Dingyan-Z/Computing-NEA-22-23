@@ -12,6 +12,23 @@ def calc_moments(b1, b2, moment, rms, gradient, t):
     return v, s, v / (1 - b1 ** t), s / (1 - b2 ** t)
 
 
+def sep(data: np.ndarray):
+    return np.hsplit(data, [-1])
+
+
+def avg(data: np.ndarray, axis=None):
+    return np.sum(data, axis=axis) / len(data)
+
+
+def if_dropout(data: np.ndarray, rate, dropout):
+    if dropout and rate < 1:
+        for i, v in enumerate(data):
+            if random.random() > rate:
+                data[i] = np.zeros(v.shape)
+        return data / (1 - rate)
+    return data
+
+
 def mini_batch(func):
     def wrapper(self, data: np.ndarray, labels: np.ndarray, *args, **kwargs):
         samples = np.random.randint(0, len(data), size=min(32, len(data)))
