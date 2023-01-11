@@ -1,23 +1,51 @@
 import numpy as np
 import utils
-import random
+import copy
 
 
 class Dense:
 
     def __init__(self, layer_sizes, units, alpha=0.001, b1=0.9, b2=0.999, eps=1e-8, rate=None):
-        self.layers = [units[i].init_weights(*layer_sizes[i:i + 2]) for i in range(len(layer_sizes) - 1)]
+        self.units = units
+        self.layer_sizes = layer_sizes
         self.units = units
         self.alpha = alpha
-        self.bias = np.random.random()
         self.iterations = 0
-        self.v_dw = [np.zeros((layer_sizes[i], v)) for i, v in enumerate(layer_sizes[1:])]
-        self.s_dw = [np.copy(v) for v in self.v_dw]
-        self.v_db = self.s_db = 0
         self.b1 = b1
         self.b2 = b2
         self.eps = eps
-        self.rate = ([0.8] + [0.5] * (len(layer_sizes) - 2) + [1]) if rate is None else rate
+        self.rate = ([0.5] * len(layer_sizes)) if rate is None else rate
+        self.v_dw = [np.zeros((self.layer_sizes[i], v)) for i, v in enumerate(self.layer_sizes[1:])]
+        self.s_dw = [np.copy(v) for v in self.v_dw]
+        self.v_db = self.s_db = 0
+        self.bias = np.random.random()
+        self.layers = [self.units[i].init_weights(*self.layer_sizes[i:i + 2]) for i in range(len(self.layer_sizes) - 1)]
+
+    def add_node(self, layer):
+        layer_sizes, units = self.get_info()
+        layer_sizes[layer] += 1
+        return Dense(layer_sizes, units)
+
+    def add_layer(self, layer, unit, size=1):
+        layer_sizes, units = self.get_info()
+        layer_sizes.insert(layer, size)
+        units.insert(layer, unit)
+        return Dense(layer_sizes, units)
+
+    def pop_layer(self, layer):
+        layer_sizes, units = self.get_info()
+        layer_sizes.pop(layer)
+        units.pop(layer)
+        return Dense(layer_sizes, units)
+
+    def pop_node(self, layer):
+        layer_sizes, units = self.get_info()
+        if layer_sizes[layer] > 1:
+            layer_sizes[layer] -= 1
+            return Dense(layer_sizes, units)
+
+    def get_changeable_layers(self):
+        return range(1, len(self.layer_sizes) - 1)
 
     def predict(self, data: np.ndarray, dropout=False):
         output = [utils.if_dropout(data, self.rate[0], dropout)]
@@ -39,6 +67,14 @@ class Dense:
             self.layers[cor_i] -= self.alpha * v_dw_cor / (s_dw_cor ** 0.5 + self.eps)
             deltas = np.atleast_2d(deltas).dot(weights.T) * utils.avg(self.units[i].gradient(activation, self.alpha))
 
+    def get_info(self):
+        return [copy.deepcopy(v) for v in (self.layer_sizes, self.units)]
+
     def cost(self, data: np.ndarray, labels: np.ndarray):
         return np.sum((self.predict(data)[-1] - labels) ** 2) / len(data) / 2
 
+    def copy(self):
+        return Dense(*copy.deepcopy(self.get_info()))
+
+    def __repr__(self):
+        return f"\nunits: {self.units}\nlayers: {self.layer_sizes}\n"
