@@ -1,6 +1,7 @@
-import numpy as np
-import utils
-import copy
+from copy import deepcopy
+from numpy import atleast_2d, sum, zeros, ndarray
+from numpy.random import default_rng
+from utils import avg, calc_moments, if_dropout, mini_batch
 
 
 class Dense:
@@ -15,10 +16,10 @@ class Dense:
         self.b2 = b2
         self.eps = eps
         self.rate = ([0.5] * len(layer_sizes)) if rate is None else rate
-        self.v_dw = [np.zeros((self.layer_sizes[i], v)) for i, v in enumerate(self.layer_sizes[1:])]
-        self.s_dw = [np.copy(v) for v in self.v_dw]
+        self.v_dw = [zeros((self.layer_sizes[i], v)) for i, v in enumerate(self.layer_sizes[1:])]
+        self.s_dw = [deepcopy(v) for v in self.v_dw]
         self.v_db = self.s_db = 0
-        self.bias = np.random.random()
+        self.bias = default_rng().random()
         self.layers = [self.units[i].init_weights(*self.layer_sizes[i:i + 2]) for i in range(len(self.layer_sizes) - 1)]
 
     def add_node(self, layer):
@@ -26,7 +27,7 @@ class Dense:
         layer_sizes[layer] += 1
         return Dense(layer_sizes, units)
 
-    def add_layer(self, layer, unit, size=1):
+    def add_layer(self, layer, unit, size=2):
         layer_sizes, units = self.get_info()
         layer_sizes.insert(layer, size)
         units.insert(layer, unit)
@@ -47,34 +48,34 @@ class Dense:
     def get_changeable_layers(self):
         return range(1, len(self.layer_sizes) - 1)
 
-    def predict(self, data: np.ndarray, dropout=False):
-        output = [utils.if_dropout(data, self.rate[0], dropout)]
+    def predict(self, data: ndarray, dropout=False):
+        output = [if_dropout(data, self.rate[0], dropout)]
         for unit, weights, rate in zip(self.units, self.layers, self.rate[1:]):
-            output.append(utils.if_dropout(unit.predict(output[-1].dot(weights), self.alpha), rate, dropout))
+            output.append(if_dropout(unit.predict(output[-1].dot(weights), self.alpha), rate, dropout))
         return output
 
-    @utils.mini_batch
-    def train(self, data: np.ndarray, labels: np.ndarray):
+    @mini_batch
+    def train(self, data: ndarray, labels: ndarray):
         self.iterations += 1
         predictions = self.predict(data, dropout=True)
-        deltas = utils.avg(predictions[-1] - labels)
-        self.v_db, self.s_db, v_db_cor, s_db_cor = utils.calc_moments(self.b1, self.b2, self.v_db, self.s_db, deltas, self.iterations)
+        deltas = avg(predictions[-1] - labels)
+        self.v_db, self.s_db, v_db_cor, s_db_cor = calc_moments(self.b1, self.b2, self.v_db, self.s_db, deltas, self.iterations)
         self.bias -= self.alpha * v_db_cor / (s_db_cor ** 0.5 + self.eps)
-        deltas *= utils.avg(self.units[-1].gradient(predictions[-1], self.alpha))
+        deltas *= avg(self.units[-1].gradient(predictions[-1], self.alpha))
         for i, (activation, weights) in enumerate(zip(reversed(predictions[:-1]), reversed(self.layers))):
             cor_i = -i - 1
-            self.v_dw[cor_i], self.s_dw[cor_i], v_dw_cor, s_dw_cor = utils.calc_moments(self.b1, self.b2, self.v_dw[cor_i], self.s_dw[cor_i], np.atleast_2d(utils.avg(activation, axis=0)).T.dot(deltas), self.iterations)
+            self.v_dw[cor_i], self.s_dw[cor_i], v_dw_cor, s_dw_cor = calc_moments(self.b1, self.b2, self.v_dw[cor_i], self.s_dw[cor_i], atleast_2d(avg(activation, axis=0)).T.dot(deltas), self.iterations)
             self.layers[cor_i] -= self.alpha * v_dw_cor / (s_dw_cor ** 0.5 + self.eps)
-            deltas = np.atleast_2d(deltas).dot(weights.T) * utils.avg(self.units[i].gradient(activation, self.alpha))
+            deltas = atleast_2d(deltas).dot(weights.T) * avg(self.units[i].gradient(activation, self.alpha))
 
     def get_info(self):
-        return [copy.deepcopy(v) for v in (self.layer_sizes, self.units)]
+        return [deepcopy(v) for v in (self.layer_sizes, self.units)]
 
-    def cost(self, data: np.ndarray, labels: np.ndarray):
-        return np.sum((self.predict(data)[-1] - labels) ** 2) / len(data) / 2
+    def cost(self, data: ndarray, labels: ndarray):
+        return sum((self.predict(data)[-1] - labels) ** 2) / len(data) / 2
 
     def copy(self):
-        return Dense(*copy.deepcopy(self.get_info()))
+        return Dense(*deepcopy(self.get_info()))
 
     def __repr__(self):
         return f"\nunits: {self.units}\nlayers: {self.layer_sizes}\n"

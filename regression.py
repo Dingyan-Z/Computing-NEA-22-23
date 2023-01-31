@@ -21,7 +21,8 @@ class Base:
     def predict(self, data: np.ndarray):
         raise NotImplementedError
 
-    def cost(self, data: np.ndarray, labels: np.ndarray):
+    @staticmethod
+    def cost(self, predictions: np.ndarray, labels: np.ndarray):
         raise NotImplementedError
 
     @utils.mini_batch
@@ -43,8 +44,8 @@ class Linear(Base):
     def predict(self, data: np.ndarray):
         return np.dot(data, self.weights) + self.bias
 
-    def cost(self, data: np.ndarray, labels: np.ndarray):
-        predictions = self.predict(data)
+    @staticmethod
+    def cost(self, predictions: np.ndarray, labels: np.ndarray):
         return (sum((prediction - label) ** 2 for prediction, label in zip(predictions, labels)) + self.lambda_ * sum(np.square(self.weights))) / 2 / len(predictions)
 
 
@@ -53,6 +54,6 @@ class Logistic(Base):
     def predict(self, data: np.ndarray):
         return 1 / (1 + np.exp(np.dot(data, self.weights) + self.bias))
 
-    def cost(self, data: np.ndarray, labels: np.ndarray):
-        predictions = self.predict(data)
-        return (sum(-label * utils.safe_log(prediction) - (1 - label) * utils.safe_log(1 - prediction) for prediction, label in zip(predictions, labels)) + self.lambda_ / 2 * sum(np.square(self.weights))) / len(predictions)
+    @staticmethod
+    def cost(self, predictions: np.ndarray, labels: np.ndarray):
+        return (sum(-label * np.log(prediction + 1e-9) - (1 - label) * np.log(1 - prediction + 1e-9) for prediction, label in zip(predictions, labels)) + self.lambda_ / 2 * sum(np.square(self.weights))) / len(predictions)

@@ -1,9 +1,5 @@
-import numpy as np
-import random
-
-
-def safe_log(n):
-    return 0 if n <= 0 else np.log(n)
+from numpy import hsplit, sum, ndarray
+from numpy.random import default_rng
 
 
 def calc_moments(b1, b2, moment, rms, gradient, t):
@@ -12,26 +8,24 @@ def calc_moments(b1, b2, moment, rms, gradient, t):
     return v, s, v / (1 - b1 ** t), s / (1 - b2 ** t)
 
 
-def sep(data: np.ndarray):
-    return np.hsplit(data, [-1])
+def sep(data: ndarray):
+    return hsplit(data, [-1])
 
 
-def avg(data: np.ndarray, axis=None):
-    return np.sum(data, axis=axis) / len(data)
+def avg(data: ndarray, axis=None):
+    return sum(data, axis=axis) / len(data)
 
 
-def if_dropout(data: np.ndarray, rate, dropout):
+def if_dropout(data: ndarray, rate, dropout):
     if dropout and rate < 1:
-        for datum in data:
-            for i, v in enumerate(datum):
-                if random.random() > rate:
-                    datum[i] = 0
-        return data / (1 - rate)
+        mask = default_rng().random(data.shape) < rate
+        return data * mask / (1 - rate)
     return data
 
 
 def mini_batch(func):
-    def wrapper(self, data: np.ndarray, labels: np.ndarray, *args, **kwargs):
-        samples = np.random.randint(0, len(data), size=min(64, len(data)))
+    def wrapper(self, data: ndarray, labels: ndarray, *args, **kwargs):
+        m = data.shape[0]
+        samples = default_rng().choice(m, replace=False, size=(min(64, m)))
         return func(self, data[samples], labels[samples], *args, **kwargs)
     return wrapper
