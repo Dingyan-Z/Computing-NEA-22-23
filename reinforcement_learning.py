@@ -12,7 +12,7 @@ class RL:
         self.gamma = gamma
         self.training_data = sep(training_data)
         self.test_data = sep(test_data)
-        output_layer = Tanh if len(unique(test_data[-1])) == 2 else LeakyReLU
+        output_layer = Tanh if unique(test_data[-1]).shape[0] == 2 else LeakyReLU
         self.net = Dense([self.training_data[0].shape[1], 2, 1], [LeakyReLU] * 2 + [output_layer])
         self.weights = zeros(5)
         self.prev_q, self.prev_feats = self.evaluate(self.net)

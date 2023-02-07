@@ -48,16 +48,16 @@ class Dense:
     def get_changeable_layers(self):
         return range(1, len(self.layer_sizes) - 1)
 
-    def predict(self, data: ndarray, dropout=False):
+    def predict(self, data: ndarray, activations=False, dropout=False):
         output = [if_dropout(data, self.rate[0], dropout)]
         for unit, weights, rate in zip(self.units, self.layers, self.rate[1:]):
             output.append(if_dropout(unit.predict(output[-1].dot(weights), self.alpha), rate, dropout))
-        return output
+        return output if activations else output[-1]
 
     @mini_batch
     def train(self, data: ndarray, labels: ndarray):
         self.iterations += 1
-        predictions = self.predict(data, dropout=True)
+        predictions = self.predict(data, activations=True, dropout=True)
         deltas = avg(predictions[-1] - labels)
         self.v_db, self.s_db, v_db_cor, s_db_cor = calc_moments(self.b1, self.b2, self.v_db, self.s_db, deltas, self.iterations)
         self.bias -= self.alpha * v_db_cor / (s_db_cor ** 0.5 + self.eps)

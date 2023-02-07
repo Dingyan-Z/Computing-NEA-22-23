@@ -4,19 +4,13 @@ from numpy import split, array, atleast_1d, ndarray
 from matplotlib.pyplot import ylabel, plot, legend, show, xlabel, title
 from utils import sep
 from reinforcement_learning import RL
-from Runtime import get_runtime
+from decision_trees import DecisionTree
 
 
-with open("abalone.csv", "r") as file:
-    data = array(list(reader(file))[1:], dtype=float)
-
-# with open("concrete_data.csv", "r") as file:
-#     data = array(list(reader(file))[1:], dtype=float)
-
-split_data = split(data, [int(len(data) * 0.8)])
+with open("medicine.csv", "r") as file:
+    data = array(list(reader(file))[1:])
 
 
-@get_runtime
 def nn_test(training_data: ndarray, test_data: ndarray, net: Dense):
     epochs = 100000
     nn = atleast_1d(net)
@@ -44,5 +38,14 @@ def rl_test(training_data: ndarray, test_data: ndarray):
     return net
 
 
+def dt_test(training_data: ndarray, test_data: ndarray):
+    dt = DecisionTree()
+    dt.train(training_data)
+    print(dt )
+    print(test_data)
+
+
 if __name__ == '__main__':
-    nn_test(*split_data, rl_test(*split_data))
+    split_data = split(data, [int(len(data) * 0.8)])
+    dt_test(*split_data)
+    # nn_test(*split_data, rl_test(*split_data))
