@@ -1,4 +1,4 @@
-from numpy import hsplit, sum, ndarray
+from numpy import hsplit, sum, ndarray, unique
 from numpy.random import default_rng
 
 
@@ -10,6 +10,10 @@ def calc_moments(b1, b2, moment, rms, gradient, t):
 
 def sep(data: ndarray):
     return hsplit(data, [-1])
+
+
+def max_len(arr: ndarray):
+    return 0 if arr.shape[0] == 0 else max(len(v) for v in unique(arr))
 
 
 def avg(data: ndarray, axis=None):

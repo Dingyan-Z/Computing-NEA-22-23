@@ -1,4 +1,27 @@
-from numpy import ndarray, unique, sum as np_sum, log2, nonzero, delete, str_, argmax, arange, zeros, full
+from numpy import ndarray, unique, sum as np_sum, log2, nonzero, delete, str_, argmax, arange, full, array, average, concatenate
+from numpy.random import choice
+from utils import max_len
+
+
+class RandomForest:
+
+    def __init__(self):
+        self.trees = [DecisionTree() for _ in range(128)]
+        self.bags = None
+
+    def train(self, data: ndarray):
+        m, p = data.shape
+        p -= 1
+        self.bags = [concatenate((choice(p, round(p ** 0.5), replace=False), arange(1) - 1)) for _ in range(len(self.trees))]
+        for i, (tree, bag) in enumerate(zip(self.trees, self.bags)):
+            print(i)
+            tree.train(data[choice(m, m)][:, bag])
+
+    def predict(self, data: ndarray):
+        predictions = array([tree.predict(data[:, bag]) for tree, bag in zip(self.trees, self.bags)]).astype("str")
+        if predictions[0][0].replace(".", "").isdigit():
+            return average(predictions.astype(float).T, axis=1)
+        return unique(predictions.T, axis=1)[:-1]
 
 
 class DecisionTree:
@@ -42,7 +65,7 @@ class DecisionTree:
         l_mask = self.get_mask(data)
         r_mask = delete(arange(data.shape[0]), l_mask)
         left, right = [self.subtrees[i].predict(data[v]) for i, v in enumerate((l_mask, r_mask))]
-        results = zeros(data.shape[0], dtype=object)
+        results = ndarray(data.shape[0], dtype=f"S{max(max_len(left), max_len(right))}")
         results[l_mask] = left
         results[r_mask] = right
         return results
@@ -58,4 +81,3 @@ class DecisionTree:
     @staticmethod
     def get_prob(data: ndarray):
         return unique(data, return_counts=True)[1] / data.shape[0]
-
