@@ -1,27 +1,26 @@
-from numpy import ndarray, unique, sum as np_sum, log2, nonzero, delete, str_, argmax, arange, full, array, average, concatenate
+from numpy import ndarray, unique, sum as np_sum, log2, nonzero, delete, argmax, arange, full, array, average, concatenate
 from numpy.random import choice
 from utils import max_len
+from concurrent.futures import ProcessPoolExecutor
 
 
 class RandomForest:
 
     def __init__(self):
-        self.trees = [DecisionTree() for _ in range(128)]
+        self.trees = [DecisionTree() for _ in range(64)]
         self.bags = None
 
     def train(self, data: ndarray):
         m, p = data.shape
         p -= 1
         self.bags = [concatenate((choice(p, round(p ** 0.5), replace=False), arange(1) - 1)) for _ in range(len(self.trees))]
-        for i, (tree, bag) in enumerate(zip(self.trees, self.bags)):
-            print(i)
-            tree.train(data[choice(m, m)][:, bag])
+        with ProcessPoolExecutor() as executor:
+            futures = [executor.submit(picklable_train, tree, data[choice(m, m)][:, bag]) for i, (tree, bag) in enumerate(zip(self.trees, self.bags))]
+        self.trees = [v.result() for v in futures]
 
     def predict(self, data: ndarray):
-        predictions = array([tree.predict(data[:, bag]) for tree, bag in zip(self.trees, self.bags)]).astype("str")
-        if predictions[0][0].replace(".", "").isdigit():
-            return average(predictions.astype(float).T, axis=1)
-        return unique(predictions.T, axis=1)[:-1]
+        predictions = array([tree.predict(data[:, bag]) for tree, bag in zip(self.trees, self.bags)])
+        return unique(predictions.T, axis=1)[:, 0]
 
 
 class DecisionTree:
@@ -54,10 +53,8 @@ class DecisionTree:
             self.label = labels[argmax(counts)]
 
     def entropy(self, labels: ndarray):
-        if labels.dtype.type is str_:
-            p = self.get_prob(labels)
-            return np_sum(-p * log2(p + 1e-9))
-        return labels.var()
+        p = self.get_prob(labels)
+        return np_sum(-p * log2(p + 1e-9))
 
     def predict(self, data: ndarray):
         if self.split == (None, None, 0):
@@ -68,12 +65,12 @@ class DecisionTree:
         results = ndarray(data.shape[0], dtype=f"S{max(max_len(left), max_len(right))}")
         results[l_mask] = left
         results[r_mask] = right
-        return results
+        return results.astype("str")
 
     def get_mask(self, data: ndarray, val=None):
         if val is None:
             data, val = data[:, self.split[0]], self.split[1]
-        return nonzero(data == val if data.dtype.type is str_ else data < val)
+        return nonzero(data == val)
 
     def __repr__(self):
         return f"({self.label} {self.split}" + f" left: {self.subtrees[0]} right: {self.subtrees[1]})" if self.subtrees else ""
@@ -81,3 +78,8 @@ class DecisionTree:
     @staticmethod
     def get_prob(data: ndarray):
         return unique(data, return_counts=True)[1] / data.shape[0]
+
+
+def picklable_train(tree, data: ndarray):
+    tree.train(data)
+    return tree
