@@ -1,4 +1,4 @@
-from numpy import ndarray, unique, sum as np_sum, log2, nonzero, delete, argmax, arange, full, array, average, concatenate
+from numpy import ndarray, unique, sum as np_sum, log2, nonzero, delete, argmax, arange, full, array, concatenate
 from numpy.random import choice
 from utils import max_len
 from concurrent.futures import ProcessPoolExecutor

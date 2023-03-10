@@ -43,10 +43,10 @@ def tree_test(training_data: ndarray, test_data: ndarray, rf=False):
 
 
 if __name__ == '__main__':
-    with open("tictactoe.csv", "r") as file:
-        data = array(list(reader(file))[1:])
+    with open("abalone.csv", "r") as file:
+        data = array(list(reader(file))[1:]).astype(float)
 
     shuffle(data)
     split_data = split(data, [int(len(data) * 0.8)])
-    tree_test(*split_data, rf=False)
-    # nn_test(*split_data, rl_test(*split_data))
+    # tree_test(*split_data, rf=True)
+    nn_test(*split_data, rl_test(*split_data))
