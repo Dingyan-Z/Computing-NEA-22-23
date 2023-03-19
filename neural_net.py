@@ -1,12 +1,12 @@
 from copy import deepcopy
-from numpy import atleast_2d, sum, zeros, ndarray
+from numpy import atleast_2d, sum as np_sum, zeros, ndarray
 from numpy.random import default_rng
 from utils import avg, calc_moments, if_dropout, mini_batch
 
 
 class Dense:
 
-    def __init__(self, layer_sizes, units, alpha=0.001, b1=0.9, b2=0.999, eps=1e-8, rate=None):
+    def __init__(self, layer_sizes, units, alpha=5e-4, b1=0.9, b2=0.999, eps=1e-8, rate=None):
         self.units = units
         self.layer_sizes = layer_sizes
         self.units = units
@@ -15,7 +15,7 @@ class Dense:
         self.b1 = b1
         self.b2 = b2
         self.eps = eps
-        self.rate = ([0.5] * len(layer_sizes)) if rate is None else rate
+        self.rate = ([0.6] * len(layer_sizes)) if rate is None else rate
         self.v_dw = [zeros((self.layer_sizes[i], v)) for i, v in enumerate(self.layer_sizes[1:])]
         self.s_dw = [deepcopy(v) for v in self.v_dw]
         self.v_db = self.s_db = 0
@@ -58,7 +58,7 @@ class Dense:
     def train(self, data: ndarray, labels: ndarray):
         self.iterations += 1
         predictions = self.predict(data, activations=True, dropout=True)
-        deltas = avg(predictions[-1] - labels)
+        deltas = avg(predictions[-1] - labels) - sum(np_sum(v) for v in self.layers)
         self.v_db, self.s_db, v_db_cor, s_db_cor = calc_moments(self.b1, self.b2, self.v_db, self.s_db, deltas, self.iterations)
         self.bias -= self.alpha * v_db_cor / (s_db_cor ** 0.5 + self.eps)
         deltas *= avg(self.units[-1].gradient(predictions[-1], self.alpha))
@@ -72,7 +72,7 @@ class Dense:
         return [deepcopy(v) for v in (self.layer_sizes, self.units)]
 
     def cost(self, data: ndarray, labels: ndarray):
-        return sum((self.predict(data)[-1] - labels) ** 2) / len(data) / 2
+        return np_sum((self.predict(data)[-1] - labels) ** 2) / len(data) / 2
 
     def copy(self):
         return Dense(*deepcopy(self.get_info()))

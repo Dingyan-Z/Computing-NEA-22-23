@@ -2,21 +2,32 @@ from numpy import ndarray, unique, sum as np_sum, log2, nonzero, delete, argmax,
 from numpy.random import choice
 from utils import max_len
 from concurrent.futures import ProcessPoolExecutor
+from sys import stdout
 
 
 class RandomForest:
 
     def __init__(self):
-        self.trees = [DecisionTree() for _ in range(64)]
+        self.trees = [DecisionTree() for _ in range(128)]
         self.bags = None
 
     def train(self, data: ndarray):
+        n = len(self.trees)
         m, p = data.shape
         p -= 1
-        self.bags = [concatenate((choice(p, round(p ** 0.5), replace=False), arange(1) - 1)) for _ in range(len(self.trees))]
+        self.bags = [concatenate((choice(p, round(p ** 0.5), replace=False), arange(1) - 1)) for _ in range(n)]
         with ProcessPoolExecutor() as executor:
             futures = [executor.submit(picklable_train, tree, data[choice(m, m)][:, bag]) for i, (tree, bag) in enumerate(zip(self.trees, self.bags))]
-        self.trees = [v.result() for v in futures]
+            count = 0
+            print("\nProgress")
+            while count < n:
+                new_count = [v.done() for v in futures].count(True)
+                if new_count != count:
+                    stdout.write("\b" * n)
+                    stdout.write(f"{new_count}/{n}")
+                    count = new_count
+            print()
+            self.trees = [v.result() for v in futures]
 
     def predict(self, data: ndarray):
         predictions = array([tree.predict(data[:, bag]) for tree, bag in zip(self.trees, self.bags)])
