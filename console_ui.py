@@ -89,7 +89,7 @@ if __name__ == '__main__':
                         model = algorithm(split_data[0].shape[1] - 1)
                         print("\nProgress")
                     case RL.__name__:
-                        rl_epochs = 1
+                        rl_epochs = 100
                         rl = RL(*[v.astype(float) for v in split_data])
                         print("\nProgress")
                         for epoch in range(rl_epochs):
@@ -99,7 +99,7 @@ if __name__ == '__main__':
                         model = rl.get_net()
                         print()
         if (type(model) in [Linear, Logistic, Dense] and action != 1) or action == 2:
-            epochs = 1
+            epochs = 100000
             training_data, test_data = [v.astype(float) for v in split_data]
             title(f"{type(model).__name__} Cost")
             xlabel("Epochs")
