@@ -1,4 +1,4 @@
-from numpy import zeros, ndarray, dot, exp, log, square, sum as np_sum, round
+from numpy import zeros, ndarray, dot, exp, log, square, sum as np_sum, round, abs as np_abs
 from utils import mini_batch, calc_moments
 
 
@@ -18,21 +18,21 @@ class Base:
         self.b2 = b2
         self.eps = eps
 
-    def predict(self, data: ndarray):
+    def predict(self, data: ndarray):  # return predicted labels for data
         raise NotImplementedError
 
-    def cost(self, data: ndarray, labels: ndarray):
+    def cost(self, data: ndarray, labels: ndarray):  # return cost at current epoch
         raise NotImplementedError
 
     @mini_batch
-    def train(self, data: ndarray, labels: ndarray):
+    def train(self, data: ndarray, labels: ndarray):  # trains model for 1 epoch
         self.iterations += 1
         m = len(data)
         differences = self.predict(data) - labels.T
         for i in range(self.num_features):
-            dw = (differences.dot(data[:, i]) + self.lambda_ * self.weights[i]) / m
+            dw = (differences.dot(data[:, i]) + np_sum(np_abs(self.lambda_ * self.weights))) / m  # gradient
             self.v_dw[i], self.s_dw[i], v_dw_cor, s_dw_cor = calc_moments(self.b1, self.b2, self.v_dw[i], self.s_dw[i], dw, self.iterations)
-            self.weights[i] -= self.alpha * v_dw_cor / (s_dw_cor ** 0.5 + self.eps)
+            self.weights[i] -= self.alpha * v_dw_cor / (s_dw_cor ** 0.5 + self.eps)  # ADAM
         db = np_sum(differences) / m
         self.v_db, self.s_db, v_db_cor, s_db_cor = calc_moments(self.b1, self.b2, self.v_db, self.s_db, db, self.iterations)
         self.bias -= self.alpha * v_db_cor / (s_db_cor ** 0.5 + self.eps)

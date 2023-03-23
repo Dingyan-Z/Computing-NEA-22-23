@@ -19,45 +19,45 @@ class RL:
         self.prev_reward = 0
         self.ratio = ratio
 
-    def update(self, reward):
+    def update(self, reward):  # update weights based on current, previous state and rewards
         difference = reward - self.prev_q + self.gamma * max(self.evaluate(next_net)[0] for next_net in self.get_actions())
         self.weights *= difference
 
-    def train(self):
+    def train(self):  # train model once
         self.net = self.choose_action()
         self.update(self.get_reward(self.net))
 
-    def get_actions(self):
-        shared_range = self.net.get_changeable_layers()
+    def get_actions(self):  # return possible actions at current state
+        shared_range = self.net.get_changeable_layers()  # communicating with neural network
         actions = [self.net, self.net.add_layer((max(shared_range) + 1) if shared_range else 1, LeakyReLU)]
-        for layer in shared_range:
+        for layer in shared_range:  # aggregates all actions to a single container
             actions += [self.net.add_node(layer), self.net.pop_node(layer), self.net.pop_layer(layer), self.net.add_layer(layer, LeakyReLU)]
-        return filter(lambda a: a is not None, actions)
+        return filter(lambda a: a is not None, actions)  # removes invalid actions
 
-    def choose_action(self):
+    def choose_action(self):  # return best action out of a list of possible ones
         actions = self.get_actions()
         (self.prev_q, self.prev_feats), action = max([(self.evaluate(v), v) for v in actions], key=lambda a: a[0][0])
         return action
 
-    def get_reward(self, net: Dense):
+    def get_reward(self, net: Dense):  # evaluates current network and returns reward
         start = perf_counter()
-        reward = self.test_net(net.copy()) / (perf_counter() - start) ** self.ratio
-        self.prev_reward, reward = reward, self.prev_reward - reward
+        reward = self.test_net(net.copy()) / (perf_counter() - start) ** self.ratio  # balancing accuracy with efficiency of model
+        self.prev_reward, reward = reward, self.prev_reward - reward  # raw reward will always be positive so need something to compare against
         return reward
 
-    def test_net(self, net):
+    def test_net(self, net):  # trains and tests network
         for _ in range(50000):
             net.train(*self.training_data)
         return net.cost(*self.test_data)
 
-    def evaluate(self, net: Dense):
+    def evaluate(self, net: Dense):  # dot product of features and weights, i.e. q-value
         feats = self.get_feats(net)
         return feats.dot(self.weights), feats
 
-    def get_net(self):
+    def get_net(self):  # extract neural net from this model
         return self.net.copy()
 
-    def get_feats(self, net: Dense):
+    def get_feats(self, net: Dense):  # examines the stored neural network and returns the features present
         layer_sizes, units = net.get_info()
         feats = zeros_like(self.weights)
         feats[0] = len(layer_sizes)
